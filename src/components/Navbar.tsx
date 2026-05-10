@@ -1,212 +1,155 @@
-import { useState } from "react";
-import { Link } from "react-router";
-import { FaGithub, FaGoogle } from "react-icons/fa";
-import { useAuth } from "../context/AuthContext";
+import { Link, useNavigate, useLocation } from 'react-router-dom'
+import { useAuth } from '../context/AuthContext'
 
-export const Navbar = () => {
-  const [menuOpen, setMenuOpen] = useState(false);
+export default function Navbar() {
+  const { user, signOut } = useAuth()
+  const navigate = useNavigate()
+  const location = useLocation()
 
-  const {
-    signInWithGitHub,
-    signInWithGoogle,
-    signOut,
-    user,
-  } = useAuth();
+  const username = user?.user_metadata?.username ?? user?.email?.split('@')[0] ?? 'You'
 
-  const displayName =
-    user?.user_metadata.user_name ||
-    user?.user_metadata.full_name ||
-    user?.email;
+  async function handleSignOut() {
+    await signOut()
+    navigate('/')
+  }
+
+  const isActive = (path: string) => location.pathname === path || location.pathname.startsWith(path)
 
   return (
-    <nav className="fixed top-0 w-full z-40 bg-[rgba(10,10,10,0.8)] backdrop-blur-lg border-b border-white/10 shadow-lg">
-      <div className="max-w-5xl mx-auto px-4">
-        <div className="flex justify-between items-center h-16">
-          <Link
-            to="/"
-            className="font-mono text-xl font-bold text-white"
-          >
-            kom<span className="text-purple-500">-productions</span>
-          </Link>
-
-          {/* Desktop Links */}
-          <div className="hidden md:flex items-center space-x-8">
-            <Link
-              to="/"
-              className="text-gray-300 hover:text-white transition-colors"
-            >
-              Home
-            </Link>
-
-            <Link
-              to="/create"
-              className="text-gray-300 hover:text-white transition-colors"
-            >
-              Create Post
-            </Link>
-
-            <Link
-              to="/communities"
-              className="text-gray-300 hover:text-white transition-colors"
-            >
-              Communities
-            </Link>
-
-            <Link
-              to="/community/create"
-              className="text-gray-300 hover:text-white transition-colors"
-            >
-              Create Community
-            </Link>
+    <nav style={{
+      position: 'sticky',
+      top: 0,
+      zIndex: 100,
+      background: 'var(--white)',
+      borderBottom: '2px solid var(--black)',
+    }}>
+      <div style={{
+        maxWidth: 1440,
+        margin: '0 auto',
+        padding: '0 60px',
+        height: 80,
+        display: 'flex',
+        alignItems: 'center',
+        gap: 48,
+      }}>
+        {/* Logo */}
+        <Link to="/" style={{ textDecoration: 'none', flexShrink: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
+          <div style={{
+            width: 40,
+            height: 40,
+            background: 'var(--black)',
+            borderRadius: '50%',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontWeight: 700,
+            fontSize: 18,
+            color: 'var(--lime)',
+          }}>
+            K
           </div>
+          <span style={{
+            fontWeight: 700,
+            fontSize: 22,
+            color: 'var(--text-primary)',
+            letterSpacing: '-0.02em',
+          }}>
+            KOM
+          </span>
+        </Link>
 
-          {/* Desktop Auth */}
-          <div className="hidden md:flex items-center">
-            {user ? (
-              <div className="flex items-center space-x-4">
-                {user.user_metadata?.avatar_url && (
-                  <img
-                    src={user.user_metadata.avatar_url}
-                    alt="User Avatar"
-                    className="w-9 h-9 rounded-full border border-white/20 object-cover"
-                  />
-                )}
+        {/* Center nav */}
+        <div style={{ display: 'flex', gap: 32, alignItems: 'center', flex: 1 }}>
+          <NavLink to="/" label="Feed" active={isActive('/') && location.pathname === '/'} />
+          <NavLink to="/community/ruthless" label="Ruthless" active={isActive('/community/ruthless')} color="var(--ruthless)" />
+          <NavLink to="/community/trace" label="Trace" active={isActive('/community/trace')} color="var(--trace)" />
+        </div>
 
-                <span className="text-gray-300 text-sm">
-                  {displayName}
-                </span>
-
-                <button
-                  onClick={signOut}
-                  className="px-4 py-2 rounded-xl bg-red-500/20 border border-red-500/40 text-red-400 hover:bg-red-500/30 transition-all duration-300"
-                >
-                  Sign Out
-                </button>
-              </div>
-            ) : (
-              <div className="flex items-center gap-3">
-                {/* GitHub Button */}
-                <button
-                  onClick={signInWithGitHub}
-                  className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white/5 border border-white/10 text-white hover:bg-white/10 transition-all duration-300"
-                >
-                  <FaGithub className="text-lg" />
-                  <span className="text-sm font-medium">
-                    GitHub
-                  </span>
-                </button>
-
-                {/* Google Button */}
-                <button
-                  onClick={signInWithGoogle}
-                  className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white/5 border border-white/10 text-white hover:bg-white/10 transition-all duration-300"
-                >
-                  <FaGoogle className="text-lg text-red-400" />
-                  <span className="text-sm font-medium">
-                    Google
-                  </span>
-                </button>
-              </div>
-            )}
-          </div>
-
-          {/* Mobile Menu Button */}
-          <div className="md:hidden">
-            <button
-              onClick={() => setMenuOpen((prev) => !prev)}
-              className="text-gray-300 focus:outline-none"
-              aria-label="Toggle menu"
-            >
-              <svg
-                className="w-6 h-6"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
+        {/* Right: auth */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+          {user ? (
+            <>
+              <Link
+                to={`/profile/${username}`}
+                style={{
+                  color: 'var(--text-muted)',
+                  fontSize: 15,
+                  fontWeight: 500,
+                  textDecoration: 'none',
+                }}
               >
-                {menuOpen ? (
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M6 18L18 6M6 6l12 12"
-                  />
-                ) : (
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M4 6h16M4 12h16M4 18h16"
-                  />
-                )}
-              </svg>
-            </button>
-          </div>
+                @{username}
+              </Link>
+              <button
+                onClick={handleSignOut}
+                style={{
+                  background: 'transparent',
+                  border: '2px solid var(--black)',
+                  color: 'var(--text-primary)',
+                  padding: '10px 24px',
+                  borderRadius: 'var(--radius-sm)',
+                  cursor: 'pointer',
+                  fontSize: 15,
+                  fontWeight: 600,
+                  fontFamily: 'var(--font-primary)',
+                  transition: 'all 0.2s',
+                }}
+                onMouseEnter={e => {
+                  (e.target as HTMLButtonElement).style.background = 'var(--black)'
+                  ;(e.target as HTMLButtonElement).style.color = 'var(--white)'
+                }}
+                onMouseLeave={e => {
+                  (e.target as HTMLButtonElement).style.background = 'transparent'
+                  ;(e.target as HTMLButtonElement).style.color = 'var(--text-primary)'
+                }}
+              >
+                Sign Out
+              </button>
+            </>
+          ) : (
+            <Link
+              to="/auth"
+              className="btn-lime"
+              style={{
+                padding: '12px 28px',
+                fontSize: 15,
+              }}
+            >
+              Join Now
+            </Link>
+          )}
         </div>
       </div>
-
-      {/* Mobile Menu */}
-      {menuOpen && (
-        <div className="md:hidden bg-[rgba(10,10,10,0.95)] border-t border-white/10">
-          <div className="px-2 pt-2 pb-3 space-y-1">
-            <Link
-              to="/"
-              className="block px-3 py-2 rounded-md text-gray-300 hover:text-white hover:bg-gray-700"
-            >
-              Home
-            </Link>
-
-            <Link
-              to="/create"
-              className="block px-3 py-2 rounded-md text-gray-300 hover:text-white hover:bg-gray-700"
-            >
-              Create Post
-            </Link>
-
-            <Link
-              to="/communities"
-              className="block px-3 py-2 rounded-md text-gray-300 hover:text-white hover:bg-gray-700"
-            >
-              Communities
-            </Link>
-
-            <Link
-              to="/community/create"
-              className="block px-3 py-2 rounded-md text-gray-300 hover:text-white hover:bg-gray-700"
-            >
-              Create Community
-            </Link>
-
-            {!user ? (
-              <div className="flex flex-col gap-3 mt-4 px-3">
-                <button
-                  onClick={signInWithGitHub}
-                  className="flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white"
-                >
-                  <FaGithub />
-                  GitHub
-                </button>
-
-                <button
-                  onClick={signInWithGoogle}
-                  className="flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white"
-                >
-                  <FaGoogle className="text-red-400" />
-                  Google
-                </button>
-              </div>
-            ) : (
-              <div className="px-3 mt-4">
-                <button
-                  onClick={signOut}
-                  className="w-full px-4 py-3 rounded-xl bg-red-500/20 border border-red-500/40 text-red-400"
-                >
-                  Sign Out
-                </button>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
     </nav>
-  );
-};
+  )
+}
+
+function NavLink({ to, label, active, color }: { to: string; label: string; active: boolean; color?: string }) {
+  return (
+    <Link
+      to={to}
+      style={{
+        color: active ? (color ?? 'var(--black)') : 'var(--text-muted)',
+        fontWeight: active ? 700 : 500,
+        fontSize: 16,
+        textDecoration: 'none',
+        transition: 'color 0.2s',
+        position: 'relative',
+        paddingBottom: 4,
+      }}
+    >
+      {label}
+      {active && (
+        <div style={{
+          position: 'absolute',
+          bottom: 0,
+          left: 0,
+          right: 0,
+          height: 3,
+          background: color ?? 'var(--lime)',
+          borderRadius: '2px 2px 0 0',
+        }} />
+      )}
+    </Link>
+  )
+}

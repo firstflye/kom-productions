@@ -1,231 +1,145 @@
-import { useState } from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useNavigate } from "react-router";
-import { supabase } from "../supabase-client";
-import { useAuth } from "../context/AuthContext";
-import {
-  FaImage,
-  FaPaperPlane,
-  FaSpinner,
-} from "react-icons/fa";
+import { useState } from 'react'
+import { supabase } from '../lib/supabase'
+import { useAuth } from '../context/AuthContext'
 
-export const CreatePostPage = () => {
-  const { user } = useAuth();
+interface Props {
+  communityId?: string
+  communityName?: string
+  onCreated: () => void
+  onClose: () => void
+}
 
-  const navigate = useNavigate();
-  const queryClient = useQueryClient();
+export default function CreatePost({ communityId, communityName, onCreated, onClose }: Props) {
+  const { user } = useAuth()
+  const [title, setTitle]     = useState('')
+  const [content, setContent] = useState('')
+  const [imageUrl, setImageUrl] = useState('')
+  const [error, setError]     = useState('')
+  const [loading, setLoading] = useState(false)
 
-  const [title, setTitle] = useState("");
-  const [content, setContent] = useState("");
-  const [image, setImage] = useState<File | null>(null);
-  const [communityId, setCommunityId] = useState("");
+  async function submit() {
+    if (!title.trim() || !content.trim()) {
+      setError('Title and content are required.')
+      return
+    }
+    setLoading(true)
+    setError('')
+    const { error: err } = await supabase.from('posts').insert({
+      title: title.trim(),
+      content: content.trim(),
+      image_url: imageUrl.trim() || null,
+      user_id: user!.id,
+      community_id: communityId ?? null,
+    })
+    setLoading(false)
+    if (err) { setError(err.message); return }
+    onCreated()
+    onClose()
+  }
 
-  const imagePreview = image
-    ? URL.createObjectURL(image)
-    : null;
-
-  const createPostMutation = useMutation({
-    mutationFn: async () => {
-      if (!user) throw new Error("Not authenticated");
-
-      let imageUrl = null;
-
-      if (image) {
-        const fileExt = image.name.split(".").pop();
-
-        const fileName = `${Date.now()}.${fileExt}`;
-
-        const { error } = await supabase.storage
-          .from("posts")
-          .upload(fileName, image);
-
-        if (error) throw error;
-
-        imageUrl = supabase.storage
-          .from("posts")
-          .getPublicUrl(fileName).data.publicUrl;
-      }
-
-      const { error } = await supabase
-        .from("posts")
-        .insert({
-          title,
-          content,
-          image_url: imageUrl,
-          user_id: user.id,
-          community_id: communityId || null,
-        });
-
-      if (error) throw error;
-    },
-
-    onSuccess: () => {
-      queryClient.invalidateQueries({
-        queryKey: ["posts"],
-      });
-
-      navigate("/");
-    },
-  });
-
-  const handleSubmit = (
-    e: React.FormEvent
-  ) => {
-    e.preventDefault();
-
-    createPostMutation.mutate();
-  };
-
-
+  const inputStyle = {
+    width: '100%',
+    background: 'var(--white)',
+    border: '2px solid var(--black)',
+    borderRadius: 'var(--radius-sm)',
+    padding: '14px 18px',
+    color: 'var(--text-primary)',
+    fontFamily: 'var(--font-primary)',
+    fontSize: 15,
+    outline: 'none',
+    transition: 'border-color 0.2s',
+  }
 
   return (
-    <div className="min-h-screen px-4 py-28">
-      <div className="max-w-3xl mx-auto">
-        {/* Header */}
-        <div className="mb-10">
-          <p className="text-purple-400 uppercase tracking-[0.3em] text-sm mb-3">
-            Creator Studio
+    <div style={{
+      position: 'fixed', inset: 0, zIndex: 200,
+      background: 'rgba(0,0,0,0.6)',
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      padding: 24,
+      backdropFilter: 'blur(4px)',
+    }}
+      onClick={e => { if (e.target === e.currentTarget) onClose() }}
+    >
+      <div style={{
+        background: 'var(--white)',
+        border: '3px solid var(--black)',
+        borderRadius: 'var(--radius-md)',
+        padding: 48,
+        width: '100%',
+        maxWidth: 600,
+        boxShadow: '8px 8px 0 rgba(0,0,0,0.1)',
+      }}>
+        <h2 style={{ fontSize: 36, fontWeight: 700, marginBottom: 8 }}>
+          New Post
+        </h2>
+        {communityName && (
+          <p style={{ color: 'var(--text-muted)', fontSize: 15, marginBottom: 32 }}>
+            Posting to <span className="pill pill-lime" style={{ marginLeft: 8 }}>{communityName}</span>
           </p>
+        )}
 
-          <h1 className="text-5xl font-black text-white mb-4 leading-tight">
-            Share Your
-            <span className="bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">
-              {" "}
-              Vision
-            </span>
-          </h1>
-
-          <p className="text-gray-400 text-lg">
-            Publish artwork, updates, stories,
-            announcements, or community content.
-          </p>
-        </div>
-
-        {/* Form Card */}
-        <div className="relative overflow-hidden rounded-3xl border border-white/10 bg-white/5 backdrop-blur-2xl shadow-2xl">
-          {/* Glow */}
-          <div className="absolute inset-0 bg-gradient-to-br from-purple-500/10 via-transparent to-pink-500/10 pointer-events-none" />
-
-          <form
-            onSubmit={handleSubmit}
-            className="relative p-8 space-y-8"
-          >
-            {/* Title */}
-            <div>
-              <label className="block text-sm font-medium text-gray-300 mb-3">
-                Post Title
-              </label>
-
-              <input
-                type="text"
-                placeholder="Enter a powerful title..."
-                value={title}
-                onChange={(e) =>
-                  setTitle(e.target.value)
-                }
-                className="w-full px-5 py-4 bg-black/30 border border-white/10 rounded-2xl text-white placeholder:text-gray-500 focus:outline-none focus:border-purple-500 transition-all"
-                required
-              />
-            </div>
-
-            {/* Content */}
-            <div>
-              <label className="block text-sm font-medium text-gray-300 mb-3">
-                Content
-              </label>
-
-              <textarea
-                value={content}
-                onChange={(e) =>
-                  setContent(e.target.value)
-                }
-                rows={8}
-                placeholder="Tell your story..."
-                className="w-full px-5 py-4 bg-black/30 border border-white/10 rounded-2xl text-white placeholder:text-gray-500 focus:outline-none focus:border-purple-500 transition-all resize-none"
-                required
-              />
-            </div>
-
-            {/* Image Upload */}
-            <div>
-              <label className="block text-sm font-medium text-gray-300 mb-3">
-                Cover Image
-              </label>
-
-              <label className="flex flex-col items-center justify-center w-full h-64 border-2 border-dashed border-white/10 rounded-3xl cursor-pointer bg-black/20 hover:border-purple-500/50 transition-all overflow-hidden relative">
-                {imagePreview ? (
-                  <img
-                    src={imagePreview}
-                    alt="Preview"
-                    className="w-full h-full object-cover"
-                  />
-                ) : (
-                  <div className="flex flex-col items-center text-gray-400">
-                    <FaImage className="text-5xl mb-4" />
-
-                    <p className="text-lg font-medium">
-                      Upload an image
-                    </p>
-
-                    <p className="text-sm text-gray-500 mt-2">
-                      PNG, JPG, WEBP
-                    </p>
-                  </div>
-                )}
-
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={(e) =>
-                    setImage(
-                      e.target.files?.[0] || null
-                    )
-                  }
-                  className="hidden"
-                />
-              </label>
-            </div>
-
-            {/* Community */}
-            <div>
-              <label className="block text-sm font-medium text-gray-300 mb-3">
-                Community ID
-              </label>
-
-              <input
-                type="number"
-                value={communityId}
-                onChange={(e) =>
-                  setCommunityId(e.target.value)
-                }
-                placeholder="Optional"
-                className="w-full px-5 py-4 bg-black/30 border border-white/10 rounded-2xl text-white placeholder:text-gray-500 focus:outline-none focus:border-purple-500 transition-all"
-              />
-            </div>
-
-            {/* Submit */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          <input
+            placeholder="Title"
+            value={title}
+            onChange={e => setTitle(e.target.value)}
+            style={inputStyle}
+            onFocus={e => (e.target.style.borderColor = 'var(--lime)')}
+            onBlur={e  => (e.target.style.borderColor = 'var(--black)')}
+          />
+          <textarea
+            placeholder="Share your work, thoughts, or anything..."
+            value={content}
+            onChange={e => setContent(e.target.value)}
+            rows={6}
+            style={{ ...inputStyle, resize: 'vertical', lineHeight: 1.6 }}
+            onFocus={e => (e.target.style.borderColor = 'var(--lime)')}
+            onBlur={e  => (e.target.style.borderColor = 'var(--black)')}
+          />
+          <input
+            placeholder="Image URL (optional)"
+            value={imageUrl}
+            onChange={e => setImageUrl(e.target.value)}
+            style={inputStyle}
+            onFocus={e => (e.target.style.borderColor = 'var(--lime)')}
+            onBlur={e  => (e.target.style.borderColor = 'var(--black)')}
+          />
+          {error && <p style={{ color: 'var(--ruthless)', fontSize: 14, fontWeight: 600 }}>{error}</p>}
+          <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end', marginTop: 8 }}>
             <button
-              type="submit"
-              disabled={
-                createPostMutation.isPending
-              }
-              className="w-full flex items-center justify-center gap-3 py-4 rounded-2xl bg-gradient-to-r from-purple-500 to-pink-500 hover:scale-[1.01] hover:shadow-[0_0_30px_rgba(168,85,247,0.4)] transition-all duration-300 font-semibold text-white disabled:opacity-50"
+              onClick={onClose}
+              style={{
+                background: 'transparent', border: '2px solid var(--black)',
+                color: 'var(--text-primary)', padding: '12px 28px', borderRadius: 'var(--radius-sm)',
+                cursor: 'pointer', fontFamily: 'var(--font-primary)', fontSize: 15, fontWeight: 600,
+                transition: 'all 0.2s',
+              }}
+              onMouseEnter={e => {
+                (e.currentTarget as HTMLElement).style.background = 'var(--black)'
+                ;(e.currentTarget as HTMLElement).style.color = 'var(--white)'
+              }}
+              onMouseLeave={e => {
+                (e.currentTarget as HTMLElement).style.background = 'transparent'
+                ;(e.currentTarget as HTMLElement).style.color = 'var(--text-primary)'
+              }}
             >
-              {createPostMutation.isPending ? (
-                <>
-                  <FaSpinner className="animate-spin" />
-                  Publishing...
-                </>
-              ) : (
-                <>
-                  <FaPaperPlane />
-                  Publish Post
-                </>
-              )}
+              Cancel
             </button>
-          </form>
+            <button
+              onClick={submit}
+              disabled={loading}
+              className="btn-lime"
+              style={{
+                padding: '12px 32px',
+                fontSize: 15,
+                opacity: loading ? 0.6 : 1,
+              }}
+            >
+              {loading ? 'Posting…' : 'Post'}
+            </button>
+          </div>
         </div>
       </div>
     </div>
-  );
-};
+  )
+}
