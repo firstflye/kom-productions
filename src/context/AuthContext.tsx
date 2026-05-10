@@ -5,17 +5,12 @@ import { supabase } from "../supabase-client";
 interface AuthContextType {
   user: User | null;
   signInWithGitHub: () => void;
-  signInWithGoogle: () => void;
   signOut: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-export const AuthProvider = ({
-  children,
-}: {
-  children: React.ReactNode;
-}) => {
+export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
 
   useEffect(() => {
@@ -23,53 +18,35 @@ export const AuthProvider = ({
       setUser(session?.user ?? null);
     });
 
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_, session) => {
+    const { data: listener } = supabase.auth.onAuthStateChange((_, session) => {
       setUser(session?.user ?? null);
     });
 
     return () => {
-      subscription.unsubscribe();
+      listener.subscription.unsubscribe();
     };
   }, []);
 
-  const signInWithGitHub = async () => {
-    await supabase.auth.signInWithOAuth({
-      provider: "github",
-    });
+  const signInWithGitHub = () => {
+    supabase.auth.signInWithOAuth({ provider: "github" });
   };
 
-  const signInWithGoogle = async () => {
-    await supabase.auth.signInWithOAuth({
-      provider: "google",
-    });
-  };
-
-  const signOut = async () => {
-    await supabase.auth.signOut();
+  const signOut = () => {
+    supabase.auth.signOut();
   };
 
   return (
-    <AuthContext.Provider
-      value={{
-        user,
-        signInWithGitHub,
-        signInWithGoogle,
-        signOut,
-      }}
-    >
-      {children}
+    <AuthContext.Provider value={{ user, signInWithGitHub, signOut }}>
+      {" "}
+      {children}{" "}
     </AuthContext.Provider>
   );
 };
 
 export const useAuth = (): AuthContextType => {
   const context = useContext(AuthContext);
-
   if (context === undefined) {
     throw new Error("useAuth must be used within the AuthProvider");
   }
-
   return context;
 };
