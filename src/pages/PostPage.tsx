@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { supabase } from '../lib/supabase'
+import { supabase } from "../supabase-client";
 import { useAuth } from '../context/AuthContext'
 import { Post } from '../components/PostCard'
 

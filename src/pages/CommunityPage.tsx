@@ -1,10 +1,10 @@
 import { useState, useCallback } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { supabase } from '../lib/supabase'
+import { supabase } from "../supabase-client";
 import { useAuth } from '../context/AuthContext'
 import PostCard, { Post } from '../components/PostCard'
-import CreatePost from '../components/CreatePost'
+import CreatePost from './CreatePostPage'
 
 const COMMUNITY_META: Record<string, { color: string; tagline: string; description: string; emoji: string; bg: string }> = {
   ruthless: {
